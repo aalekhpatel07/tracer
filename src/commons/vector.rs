@@ -6,7 +6,7 @@ use rand::Rng;
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Vec3(f64, f64, f64);
+pub struct Vec3(pub f64, pub f64, pub f64);
 
 unsafe impl Send for Vec3 {}
 unsafe impl Sync for Vec3 {}
@@ -67,6 +67,14 @@ impl Mul<f64> for Vec3 {
     }
 }
 
+impl Mul<Vec3> for f64 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        Vec3(self * rhs.0, self * rhs.1, self * rhs.2)
+    }
+}
+
 impl Mul<Vec3> for Vec3 {
     type Output = Vec3;
 
@@ -85,6 +93,14 @@ impl Div<Vec3> for Vec3 {
             self.1 / rhs.1,
             self.2 / rhs.2,
         )
+    }
+}
+
+impl Div<Vec3> for f64 {
+    type Output = Vec3;
+
+    fn div(self, rhs: Vec3) -> Self::Output {
+        Vec3(self / rhs.0, self / rhs.1, self / rhs.2)
     }
 }
 
@@ -358,6 +374,19 @@ mod tests {
         assert_eq!(v * 3., v_times_3);
     }
 
+    #[test]
+    fn test_f64_mul_vec3() {
+        let v = Vec3::new(3.0, 4.0, -2.0);
+        let v_times_3 = Vec3::new(9.0, 12.0, -6.0);
+        assert_eq!(3. * v, v_times_3);
+    }
+
+    #[test]
+    fn test_f64_div_vec3() {
+        let v = Vec3::new(1.0, 2.0, 3.0);
+        let three_div_v = Vec3::new(3.0, 1.5, 1.0);
+        assert_eq!(3. / v, three_div_v);
+    }
     #[test]
     fn test_from_slice() {
 

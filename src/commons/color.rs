@@ -4,7 +4,35 @@ use std::io::Result;
 
 pub type Pixel = (u8, u8, u8);
 
+
+impl Into<Pixel> for Vec3 {
+    fn into(self) -> Pixel {
+        let x = self.0.clamp(0., 1.);
+        let y = self.1.clamp(0., 1.);
+        let z = self.2.clamp(0., 1.);
+
+        Pixel::from(
+            (
+                (255.999 * x).round() as u8,
+                (255.999 * y).round() as u8,
+                (255.999 * z).round() as u8,
+            )
+        )
+    }
+}
+
+impl Into<Vec3> for Pixel {
+    fn into(self) -> Vec3 {
+        let x = (self.0 as f64) / 255.999;
+        let y = (self.1 as f64) / 255.999;
+        let z = (self.2 as f64) / 255.999;
+
+        Vec3::new(x, y, z)
+    }
+}
+
 use progress_bars::*;
+use crate::commons::Vec3;
 
 pub fn write_pixel<W: Write>(writer: &mut W, pixel: Pixel) -> Result<usize> {
 
@@ -92,6 +120,7 @@ mod tests {
     use super::{write_ppm, Pixel, create_rainbow_color};
     use super::progress_bars;
     use crossbeam_channel::{unbounded, Sender, Receiver};
+    use crate::commons::Vec3;
 
     #[test]
     fn test_rainbow_256x256_write_to_file() -> Result<()> {
@@ -120,5 +149,22 @@ mod tests {
         progress_bar.finish();
 
         Ok(())
+    }
+
+    #[test]
+    fn convert_from_vec3 () {
+        let v = Vec3::new(0.5, 0.3, 0.2);
+        let expected = Pixel::from((128, 77, 51));
+        let observed: Pixel = v.into();
+        assert_eq!(observed, expected);
+    }
+
+    #[test]
+    fn convert_into_vec3 () {
+        let pixel = Pixel::from((128, 77, 51));
+        let expected = Vec3::new(0.5, 0.3, 0.2);
+        let observed: Vec3 = pixel.into();
+        let tolerance: f64 = 1e-2;
+        assert!((observed - expected).norm() <= tolerance, "Observed {} and expected {} much more different than allowed tolerance of {}", observed, expected, tolerance);
     }
 }
