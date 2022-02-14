@@ -27,7 +27,20 @@ pub fn ray_color(ray: &Ray, world: &HittableList, depth: isize) -> Vec3 {
     }
 
     if let Some(hit_record) = world.hit(ray, 0.001, f64::INFINITY) {
-        let target: Vec3 = hit_record.point + hit_record.normal + Vec3::random_in_unit_sphere();
+        // Diffusion parameters: Probability distribution for scattering rays that hit from different angles.
+
+        // Diffuse 1: Probability distribution scales by cos^3(phi).
+        // let target: Vec3 = hit_record.point + hit_record.normal + Vec3::random_in_unit_sphere();
+
+        // Diffuse 2: Approximate Lambertian with probability distribution cos(phi). More uniform scatter
+        // than 1.
+        // let target: Vec3 = hit_record.point + hit_record.normal + Vec3::random_unit_vector();
+
+        // Diffuse 3: Uniform scatter for all points away from hit-point, independent of the normal angle.
+        // let target: Vec3 = hit_record.point + Vec3::random_in_hemisphere(hit_record.normal);
+
+        // Let's use Diffuse 2.
+        let target: Vec3 = hit_record.point + hit_record.normal + Vec3::random_unit_vector();
 
         let new_ray = Ray::new(&hit_record.point, &(target - hit_record.point));
         return 0.5 * ray_color(&new_ray, world, depth - 1);
