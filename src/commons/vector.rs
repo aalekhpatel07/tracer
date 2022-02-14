@@ -1,8 +1,7 @@
-use std::fmt::{Debug, Display, Formatter};
-use std::ops::{Add, Sub, AddAssign, Mul, MulAssign, SubAssign, DivAssign, Div, Neg, Index};
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
-
+use std::fmt::{Debug, Display, Formatter};
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Neg, Sub, SubAssign};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Vec3(pub f64, pub f64, pub f64);
@@ -38,7 +37,7 @@ impl Sub for Vec3 {
     type Output = Vec3;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Self(self.0-rhs.0, self.1-rhs.1, self.2-rhs.2)
+        Self(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
     }
 }
 
@@ -82,16 +81,11 @@ impl Mul<Vec3> for Vec3 {
     }
 }
 
-
 impl Div<Vec3> for Vec3 {
     type Output = Vec3;
 
     fn div(self, rhs: Self) -> Self::Output {
-        Self(
-            self.0 / rhs.0,
-            self.1 / rhs.1,
-            self.2 / rhs.2,
-        )
+        Self(self.0 / rhs.0, self.1 / rhs.1, self.2 / rhs.2)
     }
 }
 
@@ -107,11 +101,7 @@ impl Div<f64> for Vec3 {
     type Output = Vec3;
 
     fn div(self, rhs: f64) -> Self::Output {
-        Self(
-            self.0 / rhs,
-            self.1 / rhs,
-            self.2 / rhs
-        )
+        Self(self.0 / rhs, self.1 / rhs, self.2 / rhs)
     }
 }
 
@@ -131,7 +121,6 @@ impl MulAssign<f64> for Vec3 {
     }
 }
 
-
 impl Vec3 {
     pub fn norm_squared(self) -> f64 {
         self.0.powi(2) + self.1.powi(2) + self.2.powi(2)
@@ -147,21 +136,17 @@ impl Vec3 {
 
     pub fn near_zero(self) -> bool {
         let tolerance: f64 = 1e-18;
-        self.0.abs() <= tolerance &&
-        self.1.abs() <= tolerance &&
-        self.2.abs() <= tolerance
+        self.0.abs() <= tolerance && self.1.abs() <= tolerance && self.2.abs() <= tolerance
     }
-
 }
 
 impl Vec3 {
-
     pub fn rand_uniform(min: f64, max: f64) -> Self {
         let mut rng = rand::thread_rng();
         Self(
             rng.gen_range(min..max),
             rng.gen_range(min..max),
-            rng.gen_range(min..max)
+            rng.gen_range(min..max),
         )
     }
 }
@@ -216,7 +201,7 @@ impl From<[f32; 3]> for Vec3 {
     }
 }
 
-    impl Distribution<Vec3> for Standard {
+impl Distribution<Vec3> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Vec3 {
         let (x, y, z) = rng.gen();
         Vec3(x, y, z)
@@ -257,7 +242,10 @@ impl Index<u32> for Vec3 {
             1 => &self.1,
             2 => &self.2,
             _ => {
-                panic!("Index {} is out of bounds. Must be one of: (0, 1, 2).", index);
+                panic!(
+                    "Index {} is out of bounds. Must be one of: (0, 1, 2).",
+                    index
+                );
             }
         }
     }
@@ -277,7 +265,7 @@ impl LinAlgRandGen for Vec3 {
             generated.2 = 0.;
 
             if generated.norm_squared() < 1. {
-                return generated
+                return generated;
             }
         }
     }
@@ -305,7 +293,6 @@ impl LinAlgRandGen for Vec3 {
     }
 }
 
-
 pub trait LinAlgOp {
     fn dot(self, rhs: Self) -> f64;
     fn cross(self, rhs: Self) -> Self;
@@ -323,7 +310,7 @@ impl LinAlgOp for Vec3 {
         Self(
             self.1 * rhs.2 - self.2 * rhs.1,
             self.2 * rhs.0 - self.0 * rhs.2,
-            self.0 * rhs.1 - self.1 * rhs.0
+            self.0 * rhs.1 - self.1 * rhs.0,
         )
     }
 
@@ -344,7 +331,6 @@ impl LinAlgOp for Vec3 {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
 
@@ -355,9 +341,9 @@ mod tests {
     const TOLERANCE_LEVEL: f64 = 1e-12;
 
     fn close_enough(v1: Vec3, v2: Vec3) -> bool {
-        (v1.0 - v2.0).abs() <= TOLERANCE_LEVEL &&
-            (v1.1 - v2.1).abs() <= TOLERANCE_LEVEL &&
-            (v1.2 - v2.2).abs() <= TOLERANCE_LEVEL
+        (v1.0 - v2.0).abs() <= TOLERANCE_LEVEL
+            && (v1.1 - v2.1).abs() <= TOLERANCE_LEVEL
+            && (v1.2 - v2.2).abs() <= TOLERANCE_LEVEL
     }
 
     #[test]
@@ -388,7 +374,6 @@ mod tests {
     }
     #[test]
     fn test_from_slice() {
-
         let temp: [f64; 3] = [3.0, 2.0, 1.0];
         let v: Vec3 = temp.into();
     }
@@ -424,9 +409,18 @@ mod tests {
     #[test]
     fn test_indexing() {
         let v1: Vec3 = [1., 2., 3.].into();
-        assert_eq!(v1[0], v1.0, "Index at 0 does not equal to the x coordinate.");
-        assert_eq!(v1[1], v1.1, "Index at 1 does not equal to the y coordinate.");
-        assert_eq!(v1[2], v1.2, "Index at 2 does not equal to the z coordinate.");
+        assert_eq!(
+            v1[0], v1.0,
+            "Index at 0 does not equal to the x coordinate."
+        );
+        assert_eq!(
+            v1[1], v1.1,
+            "Index at 1 does not equal to the y coordinate."
+        );
+        assert_eq!(
+            v1[2], v1.2,
+            "Index at 2 does not equal to the z coordinate."
+        );
     }
 
     #[test]
@@ -437,7 +431,11 @@ mod tests {
         let observed: f64 = v1.dot(v2);
         let expected: f64 = 2. * 3. + 2. * 3.2 + 2. * 5.;
 
-        assert_eq!(observed, expected, "Dot product of {} and {} must be {}.", v1, v2, expected);
+        assert_eq!(
+            observed, expected,
+            "Dot product of {} and {} must be {}.",
+            v1, v2, expected
+        );
     }
 
     #[test]
@@ -448,16 +446,27 @@ mod tests {
         let observed: Vec3 = v1.cross(v2);
         let expected: Vec3 = [3.6, -4.0, 0.4].into();
 
-        assert!(close_enough(observed, expected), "Cross product of {} and {} must be {}.", v1, v2, expected);
+        assert!(
+            close_enough(observed, expected),
+            "Cross product of {} and {} must be {}.",
+            v1,
+            v2,
+            expected
+        );
     }
 
     #[test]
     fn test_linalgop_unit_vector() {
         let v1: Vec3 = [1., 1., 1.].into();
-        let expected: Vec3 = [1./f64::sqrt(3.); 3].into();
+        let expected: Vec3 = [1. / f64::sqrt(3.); 3].into();
 
         let observed = v1.unit_vector();
-        assert!(close_enough(observed, expected), "Unit vector of {} must be {}.", v1, expected);
+        assert!(
+            close_enough(observed, expected),
+            "Unit vector of {} must be {}.",
+            v1,
+            expected
+        );
     }
 
     #[test]
@@ -469,7 +478,11 @@ mod tests {
         let expected: Vec3 = [-23.; 3].into();
         assert!(
             close_enough(observed, expected),
-            "Reflection of inbound vector {} across normal {} must be {}.\nFound {}", inbound, normal, expected, observed
+            "Reflection of inbound vector {} across normal {} must be {}.\nFound {}",
+            inbound,
+            normal,
+            expected,
+            observed
         );
     }
 
@@ -484,7 +497,12 @@ mod tests {
 
         assert!(
             close_enough(observed, expected),
-            "Refraction of inbound vector {} across normal {} and eta {} must be {}.\nFound {}", inbound, normal, ratio, expected, observed
+            "Refraction of inbound vector {} across normal {} and eta {} must be {}.\nFound {}",
+            inbound,
+            normal,
+            ratio,
+            expected,
+            observed
         );
     }
 

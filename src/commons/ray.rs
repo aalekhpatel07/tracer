@@ -1,6 +1,5 @@
-use std::fmt::{Display, Formatter};
 use crate::commons::{Point, Vec3};
-
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Ray {
@@ -12,7 +11,7 @@ impl Default for Ray {
     fn default() -> Self {
         Self {
             origin: Vec3::default(),
-            direction: Vec3::default()
+            direction: Vec3::default(),
         }
     }
 }
@@ -29,7 +28,7 @@ impl Ray {
     pub fn new(origin: &Point, direction: &Vec3) -> Self {
         Self {
             origin: *origin,
-            direction: *direction
+            direction: *direction,
         }
     }
 
@@ -38,37 +37,29 @@ impl Ray {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::commons::{Ray, Vec3, Point};
+    use crate::commons::{Point, Ray, Vec3};
 
     #[test]
     fn ray_default() {
-       let ray = Ray::default();
-       assert_eq!(ray.origin, [0.; 3].into());
+        let ray = Ray::default();
+        assert_eq!(ray.origin, [0.; 3].into());
         assert_eq!(ray.direction, [0.; 3].into());
-   }
+    }
 
     #[test]
     fn ray_at() {
-        let ray = Ray::new(
-            &Point::new(0., 0., 0.),
-            &Point::new(1., 1., 1.)
-        );
+        let ray = Ray::new(&Point::new(0., 0., 0.), &Point::new(1., 1., 1.));
         assert_eq!(ray.at(1.), [1.; 3].into());
         assert_eq!(ray.at(0.), [0.; 3].into());
     }
 
     #[test]
     fn ray_display() {
-        let ray = Ray::new(
-            &Point::new(0., 0., 0.),
-            &Point::new(1., 1., 1.)
-        );
+        let ray = Ray::new(&Point::new(0., 0., 0.), &Point::new(1., 1., 1.));
 
         let ray_as_str = format!("{}", ray);
         assert_eq!(ray_as_str, "⟨0, 0, 0⟩ + t ⟨1, 1, 1⟩")
     }
-
 }

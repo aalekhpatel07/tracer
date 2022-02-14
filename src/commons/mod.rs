@@ -1,15 +1,15 @@
-mod vector;
+mod camera;
 mod color;
-mod ray;
 mod hittable;
 mod hittable_list;
-mod camera;
+mod ray;
 mod utils;
+mod vector;
 
-pub use vector::*;
+pub use camera::*;
 pub use color::*;
-pub use ray::*;
 pub use hittable::*;
 pub use hittable_list::*;
-pub use camera::*;
+pub use ray::*;
 pub use utils::*;
+pub use vector::*;

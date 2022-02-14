@@ -1,13 +1,12 @@
+use crate::commons::hittable::Hittable;
+use crate::commons::{HitRecord, Ray};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-use crate::commons::{HitRecord, Ray};
-use crate::commons::hittable::Hittable;
-
 
 #[derive(Clone, Debug)]
 pub struct HittableList {
-    pub objects: Vec<Arc<dyn Hittable>>
+    pub objects: Vec<Arc<dyn Hittable>>,
 }
 
 impl Debug for dyn Hittable {
@@ -28,7 +27,6 @@ impl Default for HittableList {
     }
 }
 
-
 impl HittableList {
     pub fn new() -> Self {
         Self { objects: vec![] }
@@ -43,20 +41,16 @@ impl HittableList {
     }
 }
 
-
-impl Hittable for HittableList
-{
+impl Hittable for HittableList {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
-       self.objects
+        self.objects
             .iter()
-            .filter_map(|object| {
-                object.hit(ray, t_min, t_max)
-            })
-            .min_by(|hit_record_1, hit_record_2 | {
-                hit_record_1.time.partial_cmp(&hit_record_2.time).unwrap_or(Ordering::Equal)
+            .filter_map(|object| object.hit(ray, t_min, t_max))
+            .min_by(|hit_record_1, hit_record_2| {
+                hit_record_1
+                    .time
+                    .partial_cmp(&hit_record_2.time)
+                    .unwrap_or(Ordering::Equal)
             })
     }
 }
-
-
-
