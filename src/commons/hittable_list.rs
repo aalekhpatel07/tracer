@@ -1,22 +1,14 @@
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-
-// use std::thread::Thread;
-
 use crate::commons::{HitRecord, Ray};
 use crate::commons::hittable::Hittable;
-// use crossbeam_channel::unbounded;
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HittableList {
-    pub objects: Vec<Arc<Box<dyn Hittable>>>
+    pub objects: Vec<Arc<dyn Hittable>>
 }
-
-
-
-
 
 impl Debug for dyn Hittable {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -30,13 +22,19 @@ impl std::fmt::Display for dyn Hittable {
     }
 }
 
+impl Default for HittableList {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 
 impl HittableList {
     pub fn new() -> Self {
         Self { objects: vec![] }
     }
 
-    pub fn push(&mut self, object: Arc<Box<dyn Hittable>>) {
+    pub fn push(&mut self, object: Arc<dyn Hittable>) {
         self.objects.push(object)
     }
 

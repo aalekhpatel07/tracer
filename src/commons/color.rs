@@ -1,38 +1,39 @@
 use std::io::Write;
 use std::io::Result;
+use crate::commons::progress_bars::*;
+use crate::commons::Vec3;
 
 
 pub type Pixel = (u8, u8, u8);
 
+impl From<Vec3> for Pixel {
+    fn from(v: Vec3) -> Self {
+        let x = v.0.clamp(0., 1.);
+        let y = v.1.clamp(0., 1.);
+        let z = v.2.clamp(0., 1.);
 
-impl Into<Pixel> for Vec3 {
-    fn into(self) -> Pixel {
-        let x = self.0.clamp(0., 1.);
-        let y = self.1.clamp(0., 1.);
-        let z = self.2.clamp(0., 1.);
-
-        Pixel::from(
-            (
-                (255.999 * x).round() as u8,
-                (255.999 * y).round() as u8,
-                (255.999 * z).round() as u8,
-            )
+        (
+            (255.999 * x).round() as u8,
+            (255.999 * y).round() as u8,
+            (255.999 * z).round() as u8,
         )
     }
 }
 
-impl Into<Vec3> for Pixel {
-    fn into(self) -> Vec3 {
-        let x = (self.0 as f64) / 255.999;
-        let y = (self.1 as f64) / 255.999;
-        let z = (self.2 as f64) / 255.999;
+impl From<Pixel> for Vec3 {
+    fn from(pixel: Pixel) -> Self {
+        let x = (pixel.0 as f64) / 255.999;
+        let y = (pixel.1 as f64) / 255.999;
+        let z = (pixel.2 as f64) / 255.999;
 
-        Vec3::new(x, y, z)
+        Self {
+            0: x,
+            1: y,
+            2: z
+        }
     }
 }
 
-use progress_bars::*;
-use crate::commons::Vec3;
 
 pub fn write_pixel<W: Write>(writer: &mut W, pixel: Pixel) -> Result<usize> {
 
@@ -71,56 +72,35 @@ pub fn write_ppm<W: Write, I: Iterator<Item=Pixel>>(
     Ok(total_bytes_written)
 }
 
-pub mod progress_bars {
-    pub use indicatif::{ProgressBar, ProgressStyle};
-
-    pub fn file_writer(expected_size: usize) -> ProgressBar {
-        let progress_style =
-            ProgressStyle::default_bar()
-                .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-                .progress_chars("#>-");
-
-        let mut progress_bar = ProgressBar::new(
-            expected_size as u64,
-        );
-
-        progress_bar.with_style(progress_style)
-    }
-
-    pub fn hidden() -> ProgressBar {
-        ProgressBar::hidden()
-    }
-}
-
-fn create_rainbow_color<C: From<Vec<Pixel>>>(image_height: usize, image_width: usize) -> C {
-    let mut pixels: Vec<Pixel> = vec![];
-
-    for j in (0..image_height).rev() {
-        for i in 0..image_width {
-            let red: f64 = (i as f64) / (image_width as f64 - 1.);
-            let green: f64 = (j as f64) / (image_height as f64 - 1.);
-            let blue: f64 = 0.25;
-
-            let pixel: Pixel = (
-                (255.999 * red).round() as u8,
-                (255.999 * green).round() as u8,
-                (255.999 * blue).round() as u8,
-            );
-            pixels.push(pixel);
-        }
-    }
-
-    C::from(pixels)
-}
-
 #[cfg(test)]
 mod tests {
     use std::fs::File;
     use std::io::{BufWriter, Result};
-    use super::{write_ppm, Pixel, create_rainbow_color};
-    use super::progress_bars;
+    use super::{write_ppm, Pixel};
+    use crate::commons::progress_bars;
     use crossbeam_channel::{unbounded, Sender, Receiver};
     use crate::commons::Vec3;
+
+    fn create_rainbow_color<C: From<Vec<Pixel>>>(image_height: usize, image_width: usize) -> C {
+        let mut pixels: Vec<Pixel> = vec![];
+
+        for j in (0..image_height).rev() {
+            for i in 0..image_width {
+                let red: f64 = (i as f64) / (image_width as f64 - 1.);
+                let green: f64 = (j as f64) / (image_height as f64 - 1.);
+                let blue: f64 = 0.25;
+
+                let pixel: Pixel = (
+                    (255.999 * red).round() as u8,
+                    (255.999 * green).round() as u8,
+                    (255.999 * blue).round() as u8,
+                );
+                pixels.push(pixel);
+            }
+        }
+
+        C::from(pixels)
+    }
 
     #[test]
     fn test_rainbow_256x256_write_to_file() -> Result<()> {

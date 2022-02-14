@@ -1,12 +1,14 @@
 use std::fs::File;
-use std::io::{BufWriter, stdout};
-use std::sync::Arc;
-// use crossbeam_channel::{unbounded, Receiver, Sender};
-use tracer::commons::{Vec3, Point, Pixel, Ray, LinAlgOp, Hittable};
+use std::io::{BufWriter};
+use std::sync::{Arc};
+use rand::{Rng, thread_rng};
+use tracer::commons::{Vec3, Point, Pixel, Ray, LinAlgOp, Hittable, Camera, LinAlgRandGen};
 use tracer::commons::write_ppm;
 use tracer::commons::progress_bars;
 use tracer::commons::Sphere;
 use tracer::commons::HittableList;
+use tracer::commons::progress_bars::*;
+use rayon::prelude::*;
 
 
 
@@ -14,10 +16,21 @@ pub fn interpolate_linear(start: Vec3, end: Vec3, time: f64) -> Vec3 {
     (1.0 - time) * start + time * end
 }
 
-pub fn ray_color(ray: &Ray, world: &HittableList) -> Pixel {
+pub fn gamma2_correct(color: Vec3, gamma: usize) -> Vec3 {
+    [color.0, color.1, color.2].map(|x| x.powf(1. / gamma as f64)).into()
+}
 
-    if let Some(hit_record) = world.hit(ray, 0., f64::INFINITY) {
-        return (0.5 * (hit_record.normal + [1., 1., 1.].into())).into();
+pub fn ray_color(ray: &Ray, world: &HittableList, depth: isize) -> Vec3 {
+
+    if depth <= 0 {
+        return Vec3::new(0., 0., 0.);
+    }
+
+    if let Some(hit_record) = world.hit(ray, 0.001, f64::INFINITY) {
+        let target: Vec3 = hit_record.point + hit_record.normal + Vec3::random_in_unit_sphere();
+
+        let new_ray = Ray::new(&hit_record.point, &(target - hit_record.point));
+        return 0.5 * ray_color(&new_ray, world, depth - 1);
     }
 
     let unit_vector_in_direction_of_ray = ray.direction.unit_vector();
@@ -27,61 +40,157 @@ pub fn ray_color(ray: &Ray, world: &HittableList) -> Pixel {
         Vec3::new(1., 1., 1.), // White
         Vec3::new(0.5, 0.7, 1.0), // Blue
         time,
-    ).into()
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn process_pixel(
+        row: usize,
+        col: usize,
+        camera: Arc<Camera>,
+        world: Arc<HittableList>,
+        samples_per_pixel: usize,
+        image_width: usize,
+        image_height: usize,
+        max_depth: isize,
+    ) -> Pixel
+{
+    let mut rng = thread_rng();
+    let mut pixel_color: Vec3 = Vec3::new(0., 0., 0.);
+
+    for _ in 0..samples_per_pixel {
+        let u = (col as f64 + rng.gen::<f64>()) / (image_width - 1) as f64;
+        let v = (row as f64 + rng.gen::<f64>()) / (image_height - 1) as f64;
+        let ray: Ray = camera.get_ray(u, v);
+        pixel_color += ray_color(&ray, &world, max_depth);
+    }
+
+    gamma2_correct(pixel_color / samples_per_pixel as f64, 2).into()
+}
+
+/// Process all the pixels in parallel on CPU.
+///
+pub fn par_process_pixels(
+    image_width: usize,
+    image_height: usize,
+    camera: Arc<Camera>,
+    world: Arc<HittableList>,
+    samples_per_pixel: usize,
+    max_depth: isize,
+    progress_bar: ProgressBar,
+) -> Vec<Pixel> {
+
+    let rows = 0..image_height;
+    let cols = 0..image_width;
+
+    let cross: Arc<Vec<(usize, usize)>> =
+        Arc::new(
+            rows
+            .flat_map(|row| cols.clone().map(move |col| (row, col)))
+            .collect::<Vec<(usize, usize)>>()
+        );
+
+    // Too bad we cannot have a progress_bar
+    // with rayon. Technically we can but that
+    // causes a bottleneck as the progress bar
+    // is behind a RwLock.
+
+    // One helpful fix is to throttle the draw rate
+    // with `pb.set_draw_delta(20_000)`.
+
+    // To prevent frequent updating of the progress bar.
+    // https://github.com/console-rs/indicatif/issues/170#issuecomment-617128991
+
+    let mut pixels =
+        cross
+            .as_slice()
+            .par_iter() // Rayon goes brrrr...
+            .progress_with(progress_bar)
+            .map(
+                |item: &(usize, usize)|
+                    {
+                        let value = process_pixel(
+                            image_height - item.0 - 1,
+                            item.1,
+                            camera.clone(),
+                            world.clone(),
+                            samples_per_pixel,
+                            image_width,
+                            image_height,
+                            max_depth
+                        );
+                        (*item, value)
+                    }
+            )
+            .collect::<Vec<((usize, usize), Pixel)>>();
+
+    // Since we have the (row, col) as the first component,
+    // the sort would happen on the first component and
+    // we'd get the pixels in the correct order that will
+    // then be written to a ppm file.
+    pixels.par_sort();
+    pixels
+        .into_iter()
+        .map(|((_r, _c), px): ((usize, usize), Pixel)| px)
+        .collect::<Vec<Pixel>>()
 }
 
 
-fn main() {
+pub fn create_random_world() -> HittableList {
 
     let mut world = HittableList::new();
 
-
-    // Sphere
-    let sphere_1: Arc<Box<dyn Hittable>> = Arc::new(Box::new(Sphere::new(Point::new(0., 0., -1.), 0.5)));
-    let sphere_2: Arc<Box<dyn Hittable>> = Arc::new(Box::new(Sphere::new(Point::new(0., -100.5, -1.), 100.)));
+    // Some objects: Spheres
+    let sphere_1: Arc<dyn Hittable> = Arc::new(Sphere::new(Point::new(0., 0., -1.), 0.5));
+    let sphere_2: Arc<dyn Hittable> = Arc::new(Sphere::new(Point::new(0., -100.5, -1.), 100.));
 
     world.push(sphere_1.clone());
     world.push(sphere_2.clone());
+    world
+}
 
-    // println!("{}", sphere_1);
+fn main() {
 
+    let world = create_random_world();
     // Image
     let aspect_ratio = 16.0/9.0;
     let image_width: usize = 400;
     let image_height: usize = (image_width as f64 / aspect_ratio).round() as usize;
+    let max_depth: isize = 100;
 
     // Camera
     let viewport_height = 2.0;
-    let viewport_width = aspect_ratio * viewport_height;
     let focal_length = 1.0;
-
     let origin = Point::new(0., 0., 0.);
-    let horizontal = Vec3::new(viewport_width, 0., 0.);
-    let vertical = Vec3::new(0., viewport_height, 0.);
+    let camera = Camera::new(origin, aspect_ratio, viewport_height, focal_length);
 
-    let lower_left_corner = origin - horizontal / 2. - vertical / 2. - Vec3::new(0., 0., focal_length);
+    // Process pixel data.
+    let samples_per_pixel: usize = 100;
 
-    // Render
+    let pixel_pb = progress_bars::default(image_width * image_height);
 
-    let mut pixels = vec![];
+    // Redraw every 1% of the progress.
+    pixel_pb.set_draw_delta((image_width as u64 * image_height as u64) / 100);
 
-    for j in (0..image_height).rev() {
-        for i in 0..image_width {
-            let u = (i as f64) / (image_width - 1) as f64;
-            let v = (j as f64) / (image_height - 1) as f64;
-            let ray: Ray = Ray::new(&origin, &(lower_left_corner + u * horizontal + v * vertical - origin));
+    let pixels = par_process_pixels(
+        image_width,
+        image_height,
+        Arc::new(camera),
+        Arc::new(world),
+        samples_per_pixel,
+        max_depth,
+        pixel_pb
+    );
 
-            pixels.push(ray_color(&ray, &world));
-        }
-    }
-
-    // let stdout = stdout();
+    // Output
     let out_file = File::create("./fixtures/gradient.ppm").unwrap();
     let mut writer = BufWriter::new(out_file);
 
     let progress_bar = progress_bars::file_writer(((image_width as f64) * (image_height as f64) * 11.) as usize);
 
-    write_ppm(&mut writer, (image_height, image_width), pixels.into_iter(), progress_bar);
+    let total_bytes_written = write_ppm(&mut writer, (image_height, image_width), pixels.into_iter(), progress_bar.clone()).unwrap();
+    progress_bar.set_position(total_bytes_written as u64);
+    progress_bar.finish();
 
 }
 

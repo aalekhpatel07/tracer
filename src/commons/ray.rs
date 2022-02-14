@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter, Pointer, Write};
+use std::fmt::{Display, Formatter};
 use crate::commons::{Point, Vec3};
 
 
@@ -28,8 +28,8 @@ impl Display for Ray {
 impl Ray {
     pub fn new(origin: &Point, direction: &Vec3) -> Self {
         Self {
-            origin: origin.clone(),
-            direction: direction.clone()
+            origin: *origin,
+            direction: *direction
         }
     }
 

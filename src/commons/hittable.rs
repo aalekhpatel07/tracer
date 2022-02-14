@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-use std::fmt::{Display, Formatter};
 use crate::commons::{Point, Vec3, Ray, LinAlgOp};
 
 pub struct Sphere {
@@ -32,8 +30,7 @@ pub struct HitRecord {
 }
 
 
-pub trait Hittable {
-    #[inline]
+pub trait Hittable: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
     fn metadata(&self) -> String { String::from("Unknown") }
 }
@@ -62,13 +59,9 @@ impl Hittable for Sphere {
                     t_min <= time && time <= t_max
                 })
                 .min_by(|t1, t2| t1.partial_cmp(t2).unwrap())
-                // .min_by(|t1, t2| {
-                //     t1.partial_cmp(t2).expect(format!("Well {}, {}", t1, t2).as_str())
-                // })
         };
-        if hit_time.is_none() {
-            return None;
-        }
+        hit_time?; // If None, return already.
+
         let hit_time = hit_time.unwrap();
 
         let outward_facing_normal = (ray.at(hit_time) - self.center) / self.radius;

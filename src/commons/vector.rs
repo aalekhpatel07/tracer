@@ -1,7 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, Sub, AddAssign, Mul, MulAssign, SubAssign, DivAssign, Div, Neg, Index};
-use rand::distributions::{Distribution, Standard, Uniform};
-use rand::distributions::uniform::{SampleBorrow, SampleUniform, UniformSampler};
+use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 
 
@@ -275,7 +274,7 @@ impl LinAlgRandGen for Vec3 {
     fn random_in_unit_disk() -> Self {
         loop {
             let mut generated = Self::rand_uniform(-1., 1.);
-            generated.0 = 0.;
+            generated.2 = 0.;
 
             if generated.norm_squared() < 1. {
                 return generated
@@ -349,7 +348,7 @@ impl LinAlgOp for Vec3 {
 #[cfg(test)]
 mod tests {
 
-    use crate::commons::{LinAlgOp, Vec3};
+    use crate::commons::{LinAlgOp, LinAlgRandGen, Vec3};
 
     use rand::Rng;
 
@@ -487,5 +486,23 @@ mod tests {
             close_enough(observed, expected),
             "Refraction of inbound vector {} across normal {} and eta {} must be {}.\nFound {}", inbound, normal, ratio, expected, observed
         );
+    }
+
+    #[test]
+    fn random_in_unit_disk() {
+        let v = Vec3::random_in_unit_disk();
+        assert_eq!(v.2, 0.);
+        assert!(v.norm_squared() <= 1.);
+        assert!(v.norm() <= 1.);
+    }
+
+    #[test]
+    fn random_in_unit_sphere() {
+        let v = Vec3::random_in_unit_sphere();
+        assert!(v.norm() <= 1.);
+        assert!(v.norm_squared() <= 1.);
+        assert!(-1. <= v.0 && v.0 <= 1.);
+        assert!(-1. <= v.1 && v.1 <= 1.);
+        assert!(-1. <= v.2 && v.2 <= 1.);
     }
 }
