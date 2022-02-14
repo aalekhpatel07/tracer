@@ -1,17 +1,23 @@
-use crate::commons::{LinAlgOp, Point, Ray, Vec3};
+use crate::commons::{LinAlgOp, Material, Point, Ray, Vec3};
+use std::sync::Arc;
 
 pub struct Sphere {
     pub center: Point,
     pub radius: f64,
+    pub material: Arc<Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Point, radius: f64) -> Self {
-        Self { center, radius }
+    pub fn new(center: Point, radius: f64, material: Arc<Material>) -> Self {
+        Self {
+            center,
+            radius,
+            material,
+        }
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct HitRecord {
     /// The point of intersection.
     pub point: Point,
@@ -21,6 +27,8 @@ pub struct HitRecord {
     pub time: f64,
     /// true if the ray hits from outside the object, false otherwise.
     pub is_front_facing: bool,
+    /// The kind of material is hit.
+    pub material: Arc<Material>,
 }
 
 pub trait Hittable: Send + Sync {
@@ -67,6 +75,7 @@ impl Hittable for Sphere {
             },
             time: hit_time,
             is_front_facing,
+            material: self.material.clone(),
         })
     }
 

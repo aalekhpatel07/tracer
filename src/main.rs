@@ -3,11 +3,11 @@ use rayon::prelude::*;
 use std::fs::File;
 use std::io::BufWriter;
 use std::sync::Arc;
-use tracer::commons::progress_bars;
 use tracer::commons::progress_bars::*;
 use tracer::commons::write_ppm;
 use tracer::commons::HittableList;
 use tracer::commons::Sphere;
+use tracer::commons::{progress_bars, Material};
 use tracer::commons::{Camera, Hittable, LinAlgOp, LinAlgRandGen, Pixel, Point, Ray, Vec3};
 
 pub fn interpolate_linear(start: Vec3, end: Vec3, time: f64) -> Vec3 {
@@ -141,10 +141,16 @@ pub fn par_process_pixels(
 
 pub fn create_random_world() -> HittableList {
     let mut world = HittableList::new();
+    let lambertian = Arc::new(Material::Lambertian);
 
     // Some objects: Spheres
-    let sphere_1: Arc<dyn Hittable> = Arc::new(Sphere::new(Point::new(0., 0., -1.), 0.5));
-    let sphere_2: Arc<dyn Hittable> = Arc::new(Sphere::new(Point::new(0., -100.5, -1.), 100.));
+    let sphere_1: Arc<dyn Hittable> = Arc::new(Sphere::new(
+        Point::new(0., 0., -1.),
+        0.5,
+        lambertian.clone(),
+    ));
+    let sphere_2: Arc<dyn Hittable> =
+        Arc::new(Sphere::new(Point::new(0., -100.5, -1.), 100., lambertian));
 
     world.push(sphere_1.clone());
     world.push(sphere_2.clone());
