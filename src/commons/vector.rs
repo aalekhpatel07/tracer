@@ -135,7 +135,7 @@ impl Vec3 {
     }
 
     pub fn near_zero(self) -> bool {
-        let tolerance: f64 = 1e-18;
+        let tolerance: f64 = 1e-8;
         self.0.abs() <= tolerance && self.1.abs() <= tolerance && self.2.abs() <= tolerance
     }
 }
@@ -329,6 +329,13 @@ impl LinAlgOp for Vec3 {
         let r_out_parallel = n * -(f64::abs(1. - r_out_perpendicular.norm_squared())).sqrt();
         r_out_perpendicular + r_out_parallel
     }
+}
+
+pub fn reflectance(cosine: f64, refractive_index: f64) -> f64 {
+    let mut r0 = (1. - refractive_index) / (1. + refractive_index);
+    r0 *= r0;
+
+    r0 + (1. - r0) * (1. - cosine).powi(5)
 }
 
 #[cfg(test)]

@@ -7,8 +7,9 @@ use tracer::commons::progress_bars::*;
 use tracer::commons::write_ppm;
 use tracer::commons::HittableList;
 use tracer::commons::Sphere;
-use tracer::commons::{progress_bars, Material};
-use tracer::commons::{Camera, Hittable, LinAlgOp, LinAlgRandGen, Pixel, Point, Ray, Vec3};
+use tracer::commons::{progress_bars, Material, Scatter};
+use tracer::commons::{Angle, Degrees};
+use tracer::commons::{Camera, Hittable, LinAlgOp, Pixel, Point, Ray, Vec3};
 
 pub fn interpolate_linear(start: Vec3, end: Vec3, time: f64) -> Vec3 {
     (1.0 - time) * start + time * end
@@ -26,23 +27,12 @@ pub fn ray_color(ray: &Ray, world: &HittableList, depth: isize) -> Vec3 {
     }
 
     if let Some(hit_record) = world.hit(ray, 0.001, f64::INFINITY) {
-        // Diffusion parameters: Probability distribution for scattering rays that hit from different angles.
-
-        // Diffuse 1: Probability distribution scales by cos^3(phi).
-        // let target: Vec3 = hit_record.point + hit_record.normal + Vec3::random_in_unit_sphere();
-
-        // Diffuse 2: Approximate Lambertian with probability distribution cos(phi). More uniform scatter
-        // than 1.
-        // let target: Vec3 = hit_record.point + hit_record.normal + Vec3::random_unit_vector();
-
-        // Diffuse 3: Uniform scatter for all points away from hit-point, independent of the normal angle.
-        // let target: Vec3 = hit_record.point + Vec3::random_in_hemisphere(hit_record.normal);
-
-        // Let's use Diffuse 2.
-        let target: Vec3 = hit_record.point + hit_record.normal + Vec3::random_unit_vector();
-
-        let new_ray = Ray::new(&hit_record.point, &(target - hit_record.point));
-        return 0.5 * ray_color(&new_ray, world, depth - 1);
+        return if let Some((attenuation, scattered)) = hit_record.material.scatter(ray, &hit_record)
+        {
+            attenuation * ray_color(&scattered, world, depth - 1)
+        } else {
+            Vec3::default()
+        };
     }
 
     let unit_vector_in_direction_of_ray = ray.direction.unit_vector();
@@ -141,19 +131,50 @@ pub fn par_process_pixels(
 
 pub fn create_random_world() -> HittableList {
     let mut world = HittableList::new();
-    let lambertian = Arc::new(Material::Lambertian);
+
+    let material_ground = Arc::new(Material::Lambertian {
+        albedo: Vec3::new(0.8, 0.8, 0.0),
+    });
+    let material_center = Arc::new(Material::Lambertian {
+        albedo: Vec3::new(0.1, 0.2, 0.5),
+    });
+    // let material_center = Arc::new(Material::Dielectric { index_of_refraction: 1.5 });
+    let material_left = Arc::new(Material::Dielectric {
+        index_of_refraction: 1.5,
+    });
+    // let material_left = Arc::new(Material::Metal { albedo: Vec3::new(0.8, 0.8, 0.8), fuzz: 0.3 });
+    let material_right = Arc::new(Material::Metal {
+        albedo: Vec3::new(0.8, 0.6, 0.2),
+        fuzz: 0.0,
+    });
 
     // Some objects: Spheres
     let sphere_1: Arc<dyn Hittable> = Arc::new(Sphere::new(
-        Point::new(0., 0., -1.),
-        0.5,
-        lambertian.clone(),
+        Point::new(0., -100.5, -1.),
+        100.0,
+        material_ground,
     ));
-    let sphere_2: Arc<dyn Hittable> =
-        Arc::new(Sphere::new(Point::new(0., -100.5, -1.), 100., lambertian));
 
-    world.push(sphere_1.clone());
-    world.push(sphere_2.clone());
+    let sphere_2: Arc<dyn Hittable> =
+        Arc::new(Sphere::new(Point::new(0., 0., -1.), 0.5, material_center));
+
+    let sphere_3: Arc<dyn Hittable> = Arc::new(Sphere::new(
+        Point::new(-1., 0., -1.),
+        0.5,
+        material_left.clone(),
+    ));
+
+    let sphere_4: Arc<dyn Hittable> =
+        Arc::new(Sphere::new(Point::new(1., 0., -1.), 0.5, material_right));
+
+    let sphere_5: Arc<dyn Hittable> =
+        Arc::new(Sphere::new(Point::new(-1., 0., -1.), -0.4, material_left));
+
+    world.push(sphere_1);
+    world.push(sphere_2);
+    world.push(sphere_3);
+    world.push(sphere_4);
+    world.push(sphere_5);
     world
 }
 
@@ -166,10 +187,22 @@ fn main() {
     let max_depth: isize = 100;
 
     // Camera
-    let viewport_height = 2.0;
-    let focal_length = 1.0;
-    let origin = Point::new(0., 0., 0.);
-    let camera = Camera::new(origin, aspect_ratio, viewport_height, focal_length);
+    let look_from = Point::new(3., 3., 2.);
+    let look_at = Point::new(0., 0., -1.);
+    let view_up = Vec3::new(0., 1., 0.);
+    let vertical_field_of_view = Angle::Degrees(Degrees(20.0));
+    let aperture = 0.1;
+    let focus_distance = (look_from - look_at).norm();
+
+    let camera = Camera::new(
+        look_from,
+        look_at,
+        view_up,
+        vertical_field_of_view,
+        aspect_ratio,
+        aperture,
+        focus_distance,
+    );
 
     // Process pixel data.
     let samples_per_pixel: usize = 100;
