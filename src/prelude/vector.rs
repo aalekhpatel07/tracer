@@ -341,7 +341,7 @@ pub fn reflectance(cosine: f64, refractive_index: f64) -> f64 {
 #[cfg(test)]
 mod tests {
 
-    use crate::commons::{LinAlgOp, LinAlgRandGen, Vec3};
+    use crate::prelude::{LinAlgOp, LinAlgRandGen, Vec3};
 
     use rand::Rng;
 

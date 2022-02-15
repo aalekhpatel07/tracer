@@ -1,5 +1,5 @@
-use crate::commons::progress_bars::*;
-use crate::commons::Vec3;
+use crate::prelude::progress_bars::*;
+use crate::prelude::Vec3;
 use std::io::Result;
 use std::io::Write;
 
@@ -67,8 +67,8 @@ pub fn write_ppm<W: Write, I: Iterator<Item = Pixel>>(
 #[cfg(test)]
 mod tests {
     use super::{write_ppm, Pixel};
-    use crate::commons::progress_bars;
-    use crate::commons::Vec3;
+    use crate::prelude::progress_bars;
+    use crate::prelude::Vec3;
     use crossbeam_channel::{unbounded, Receiver, Sender};
     use std::fs::File;
     use std::io::{BufWriter, Result};

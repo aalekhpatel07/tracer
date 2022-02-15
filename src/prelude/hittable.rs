@@ -1,4 +1,4 @@
-use crate::commons::{LinAlgOp, Material, Point, Ray, Vec3};
+use crate::prelude::{LinAlgOp, Material, Point, Ray, Vec3};
 use std::sync::Arc;
 
 pub struct Sphere {

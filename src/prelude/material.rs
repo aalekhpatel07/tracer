@@ -1,4 +1,4 @@
-use crate::commons::{reflectance, HitRecord, LinAlgOp, LinAlgRandGen, Ray, Vec3};
+use crate::prelude::{reflectance, HitRecord, LinAlgOp, LinAlgRandGen, Ray, Vec3};
 use rand::{thread_rng, Rng};
 
 pub trait Scatter {

@@ -1,4 +1,4 @@
-use crate::commons::{LinAlgOp, LinAlgRandGen, Point, Ray, Vec3};
+use crate::prelude::{LinAlgOp, LinAlgRandGen, Point, Ray, Vec3};
 
 #[derive(Clone, Debug)]
 pub struct Camera {
@@ -83,5 +83,23 @@ impl Camera {
                 - self.origin
                 - offset),
         )
+    }
+}
+
+
+#[derive(Clone, Debug, Default)]
+pub struct Image {
+    pub height: usize,
+    pub width: usize,
+    pub aspect_ratio: f64
+}
+
+impl Image {
+    pub fn new(width: usize, aspect_ratio: f64) -> Self {
+        Self {
+            height: (width as f64 / aspect_ratio).round() as usize,
+            width,
+            aspect_ratio
+        }
     }
 }

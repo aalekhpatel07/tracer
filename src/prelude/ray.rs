@@ -1,4 +1,4 @@
-use crate::commons::{Point, Vec3};
+use crate::prelude::{Point, Vec3};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy)]
@@ -39,7 +39,7 @@ impl Ray {
 
 #[cfg(test)]
 mod tests {
-    use crate::commons::{Point, Ray, Vec3};
+    use crate::prelude::{Point, Ray, Vec3};
 
     #[test]
     fn ray_default() {

@@ -1,5 +1,5 @@
-use crate::commons::hittable::Hittable;
-use crate::commons::{HitRecord, Ray};
+use crate::prelude::hittable::Hittable;
+use crate::prelude::{HitRecord, Ray};
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;

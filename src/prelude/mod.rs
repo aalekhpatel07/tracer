@@ -6,6 +6,7 @@ mod material;
 mod ray;
 mod utils;
 mod vector;
+mod render;
 
 pub use camera::*;
 pub use color::*;
@@ -15,3 +16,4 @@ pub use material::*;
 pub use ray::*;
 pub use utils::*;
 pub use vector::*;
+pub use render::*;
