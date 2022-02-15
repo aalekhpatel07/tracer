@@ -180,7 +180,7 @@ fn main() {
     );
 
     // Output
-    let out_file = File::create("./fixtures/complex_scene.ppm").unwrap();
+    let out_file = File::create("./static/complex_scene.ppm").unwrap();
     let mut writer = BufWriter::new(out_file);
 
     let progress_bar =
