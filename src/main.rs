@@ -13,7 +13,6 @@ pub fn create_random_world() -> HittableList {
     let material_center = Arc::new(Material::Lambertian {
         albedo: Vec3::new(0.1, 0.2, 0.5),
     });
-    // let material_center = Arc::new(Material::Dielectric { index_of_refraction: 1.5 });
     let material_left = Arc::new(Material::Dielectric {
         index_of_refraction: 1.5,
     });
@@ -164,14 +163,14 @@ fn main() {
     );
 
     // Render.
-    let render_config = RenderConfig::new(500, 50);
+    let render_config = RenderConfig::new(500, 10);
 
     // Progress bar.
     // Draw every 1% to prevent frequent Rwlock-ing.
     let pixel_pb = progress_bars::default(screen.width * screen.height);
     pixel_pb.set_draw_delta((screen.width as u64 * screen.height as u64) / 100);
 
-    let pixels = par_process_pixels(
+    let pixels = process_pixels(
         Arc::new(screen.clone()),
         Arc::new(camera),
         Arc::new(world),

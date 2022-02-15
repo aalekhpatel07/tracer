@@ -265,7 +265,6 @@ dependencies = [
 name = "tracer"
 version = "0.1.0"
 dependencies = [
- "crossbeam-channel",
  "indicatif",
  "num_cpus",
  "rand",

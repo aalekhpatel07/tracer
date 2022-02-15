@@ -1,14 +1,6 @@
-use crate::prelude::progress_bars::{ParallelProgressIterator, ProgressBar};
 use crate::prelude::*;
 use rand::{thread_rng, Rng};
-use rayon::prelude::*;
 use std::sync::Arc;
-// use crate::prelude::vector::{Vec3, LinAlgOp, LinAlgRandGen};
-// use crate::prelude::hittable_list::HittableList;
-// use crate::prelude::ray::Ray;
-// use crate::prelude::hittable::Hittable;
-// use crate::prelude::{Camera, Pixel, Scatter};
-// use crate::prelude::utils::progress_bars::ProgressBar;
 
 #[derive(Debug, Clone, Copy)]
 pub struct RenderConfig {
@@ -91,59 +83,115 @@ fn process_pixel(
     gamma2_correct(pixel_color / samples_per_pixel as f64, 2).into()
 }
 
-/// Process all the pixels in parallel on CPU.
-///
-pub fn par_process_pixels(
-    image: Arc<Image>,
-    camera: Arc<Camera>,
-    world: Arc<HittableList>,
-    render_config: Arc<RenderConfig>,
-    progress_bar: ProgressBar,
-) -> Vec<Pixel> {
-    let rows = 0..image.height;
-    let cols = 0..image.width;
+// Export the parallel pixel processor if feature `parallel` is enabled (default).
+#[cfg(not(feature = "parallel"))]
+pub use process_pixels_factory::process_pixels_seq as process_pixels;
 
-    let cross: Arc<Vec<(usize, usize)>> = Arc::new(
-        rows.flat_map(|row| cols.clone().map(move |col| (row, col)))
-            .collect::<Vec<(usize, usize)>>(),
-    );
+// Export the sequential pixel processor if feature `parallel` is disabled.
+#[cfg(feature = "parallel")]
+pub use process_pixels_factory::process_pixels_par as process_pixels;
 
-    // Too bad we cannot have a progress_bar
-    // with rayon. Technically we can but that
-    // causes a bottleneck as the progress bar
-    // is behind a RwLock.
+mod process_pixels_factory {
+    use super::process_pixel;
+    use crate::prelude::*;
+    use std::sync::Arc;
 
-    // One helpful fix is to throttle the draw rate
-    // with `pb.set_draw_delta(20_000)`.
+    use crate::prelude::progress_bars::ProgressBar;
 
-    // To prevent frequent updating of the progress bar.
-    // https://github.com/console-rs/indicatif/issues/170#issuecomment-617128991
+    #[cfg(feature = "parallel")]
+    use crate::prelude::progress_bars::ParallelProgressIterator;
 
-    let mut pixels = cross
-        .as_slice()
-        .par_iter() // Rayon goes brrrr...
-        .progress_with(progress_bar)
-        .map(|item: &(usize, usize)| {
-            let value = process_pixel(
-                image.height - item.0 - 1,
-                item.1,
-                camera.clone(),
-                world.clone(),
-                render_config.samples_per_pixel,
-                image.clone(),
-                render_config.max_depth,
-            );
-            (*item, value)
-        })
-        .collect::<Vec<((usize, usize), Pixel)>>();
+    #[cfg(feature = "parallel")]
+    use rayon::prelude::*;
 
-    // Since we have the (row, col) as the first component,
-    // the sort would happen on the first component and
-    // we'd get the pixels in the correct order that will
-    // then be written to a ppm file.
-    pixels.par_sort();
-    pixels
-        .into_iter()
-        .map(|((_r, _c), px): ((usize, usize), Pixel)| px)
-        .collect::<Vec<Pixel>>()
+    #[cfg(feature = "parallel")]
+    pub fn process_pixels_par(
+        image: Arc<Image>,
+        camera: Arc<Camera>,
+        world: Arc<HittableList>,
+        render_config: Arc<RenderConfig>,
+        progress_bar: ProgressBar,
+    ) -> Vec<Pixel> {
+        let rows = 0..image.height;
+        let cols = 0..image.width;
+
+        let cross: Arc<Vec<(usize, usize)>> = Arc::new(
+            rows.flat_map(|row| cols.clone().map(move |col| (row, col)))
+                .collect::<Vec<(usize, usize)>>(),
+        );
+
+        // Too bad we cannot have a progress_bar
+        // with rayon. Technically we can but that
+        // causes a bottleneck as the progress bar
+        // is behind a RwLock.
+
+        // One helpful fix is to throttle the draw rate
+        // with `pb.set_draw_delta(20_000)`.
+
+        // To prevent frequent updating of the progress bar.
+        // https://github.com/console-rs/indicatif/issues/170#issuecomment-617128991
+
+        let mut pixels = cross
+            .as_slice()
+            .par_iter() // Rayon goes brrrr...
+            .progress_with(progress_bar)
+            .map(|item: &(usize, usize)| {
+                let value = process_pixel(
+                    image.height - item.0 - 1,
+                    item.1,
+                    camera.clone(),
+                    world.clone(),
+                    render_config.samples_per_pixel,
+                    image.clone(),
+                    render_config.max_depth,
+                );
+                (*item, value)
+            })
+            .collect::<Vec<((usize, usize), Pixel)>>();
+
+        // Since we have the (row, col) as the first component,
+        // the sort would happen on the first component and
+        // we'd get the pixels in the correct order that will
+        // then be written to a ppm file.
+        pixels.par_sort();
+        pixels
+            .into_iter()
+            .map(|((_r, _c), px): ((usize, usize), Pixel)| px)
+            .collect::<Vec<Pixel>>()
+    }
+
+    #[cfg(not(feature = "parallel"))]
+    pub fn process_pixels_seq(
+        image: Arc<Image>,
+        camera: Arc<Camera>,
+        world: Arc<HittableList>,
+        render_config: Arc<RenderConfig>,
+        progress_bar: ProgressBar,
+    ) -> Vec<Pixel> {
+        let rows = 0..image.height;
+        let cols = 0..image.width;
+
+        let cross: Arc<Vec<(usize, usize)>> = Arc::new(
+            rows.flat_map(|row| cols.clone().map(move |col| (row, col)))
+                .collect::<Vec<(usize, usize)>>(),
+        );
+
+        cross
+            .iter()
+            // .progress_with(progress_bar)
+            .map(|item: &(usize, usize)| {
+                let value = process_pixel(
+                    image.height - item.0 - 1,
+                    item.1,
+                    camera.clone(),
+                    world.clone(),
+                    render_config.samples_per_pixel,
+                    image.clone(),
+                    render_config.max_depth,
+                );
+                progress_bar.inc(1);
+                value
+            })
+            .collect::<Vec<Pixel>>()
+    }
 }
