@@ -86,12 +86,11 @@ impl Camera {
     }
 }
 
-
 #[derive(Clone, Debug, Default)]
 pub struct Image {
     pub height: usize,
     pub width: usize,
-    pub aspect_ratio: f64
+    pub aspect_ratio: f64,
 }
 
 impl Image {
@@ -99,7 +98,7 @@ impl Image {
         Self {
             height: (width as f64 / aspect_ratio).round() as usize,
             width,
-            aspect_ratio
+            aspect_ratio,
         }
     }
 }

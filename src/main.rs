@@ -1,3 +1,4 @@
+use rand::{thread_rng, Rng};
 use std::fs::File;
 use std::io::BufWriter;
 use std::sync::Arc;
@@ -52,23 +53,105 @@ pub fn create_random_world() -> HittableList {
     world
 }
 
+pub fn create_random_world_complex() -> HittableList {
+    let mut rng = thread_rng();
+
+    let mut world = HittableList::new();
+
+    let ground_material = Material::Lambertian {
+        albedo: Vec3::new(0.5, 0.5, 0.5),
+    };
+
+    let ground_sphere = Sphere::new(Point::new(0., -1000., 0.), 1000., Arc::new(ground_material));
+
+    world.push(Arc::new(ground_sphere));
+
+    for a in -11..11 {
+        for b in -11..11 {
+            let rand_x: f64 = rng.gen();
+            let rand_z: f64 = rng.gen();
+
+            let center = Point::new(a as f64 + 0.9 * rand_x, 0.2, b as f64 + 0.9 * rand_z);
+
+            if (center - Point::new(4., 0.2, 0.)).norm() > 0.9 {
+                let sphere_material = {
+                    let choice_of_material: f64 = rng.gen();
+
+                    if choice_of_material < 0.8 {
+                        // diffuse: lambertian (matte)
+                        Material::Lambertian {
+                            albedo: Vec3::rand_uniform(0., 1.) * Vec3::rand_uniform(0., 1.),
+                        }
+                    } else if choice_of_material < 0.95 {
+                        // metal
+                        Material::Metal {
+                            albedo: Vec3::rand_uniform(0.5, 1.),
+                            fuzz: rng.gen_range((0.)..(0.5)),
+                        }
+                    } else {
+                        // glass : dielectric
+                        Material::Dielectric {
+                            index_of_refraction: 1.5,
+                        }
+                    }
+                };
+
+                world.push(Arc::new(Sphere::new(
+                    center,
+                    0.2,
+                    Arc::new(sphere_material),
+                )));
+            }
+        }
+    }
+
+    let material_1 = Arc::new(Material::Dielectric {
+        index_of_refraction: 1.5,
+    });
+    let material_2 = Arc::new(Material::Lambertian {
+        albedo: Vec3::new(0.4, 0.2, 0.1),
+    });
+    let material_3 = Arc::new(Material::Metal {
+        albedo: Vec3::new(0.7, 0.6, 0.5),
+        fuzz: 0.0,
+    });
+
+    world.push(Arc::new(Sphere::new(
+        Point::new(0., 1., 0.),
+        1.,
+        material_1,
+    )));
+    world.push(Arc::new(Sphere::new(
+        Point::new(-4., 1., 0.),
+        1.,
+        material_2,
+    )));
+    world.push(Arc::new(Sphere::new(
+        Point::new(4., 1., 0.),
+        1.,
+        material_3,
+    )));
+
+    world
+}
+
 fn main() {
     // Scene
-    let world = create_random_world();
+    let world = create_random_world_complex();
 
     // Image
-    let aspect_ratio = 16.0 / 9.0;
-    let image_width: usize = 400;
+    let aspect_ratio = 3.0 / 2.0;
+    let image_width: usize = 1200;
 
     let screen = Image::new(image_width, aspect_ratio);
 
     // Camera
-    let look_from = Point::new(3., 3., 2.);
-    let look_at = Point::new(0., 0., -1.);
+    let look_from = Point::new(13., 2., 3.);
+    let look_at = Point::new(0., 0., 0.);
     let view_up = Vec3::new(0., 1., 0.);
     let vertical_field_of_view = Angle::Degrees(Degrees(20.0));
     let aperture = 0.1;
-    let focus_distance = (look_from - look_at).norm();
+    let focus_distance = 10.0;
 
     let camera = Camera::new(
         look_from,
@@ -81,10 +164,10 @@ fn main() {
     );
 
     // Render.
-    let samples_per_pixel: usize = 100;
-    let max_depth: isize = 100;
+    let render_config = RenderConfig::new(500, 50);
 
-    // Progress bar. Draw every 1% to prevent frequent Rwlock-ing.
+    // Progress bar.
+    // Draw every 1% to prevent frequent Rwlock-ing.
     let pixel_pb = progress_bars::default(screen.width * screen.height);
     pixel_pb.set_draw_delta((screen.width as u64 * screen.height as u64) / 100);
 
@@ -92,13 +175,12 @@ fn main() {
         Arc::new(screen.clone()),
         Arc::new(camera),
         Arc::new(world),
-        samples_per_pixel,
-        max_depth,
+        Arc::new(render_config),
         pixel_pb,
     );
 
     // Output
-    let out_file = File::create("./fixtures/gradient.ppm").unwrap();
+    let out_file = File::create("./fixtures/complex_scene.ppm").unwrap();
     let mut writer = BufWriter::new(out_file);
 
     let progress_bar =

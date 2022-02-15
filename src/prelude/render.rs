@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use rand::{Rng, thread_rng};
-use rayon::prelude::*;
+use crate::prelude::progress_bars::{ParallelProgressIterator, ProgressBar};
 use crate::prelude::*;
-use crate::prelude::progress_bars::{ProgressBar, ParallelProgressIterator};
+use rand::{thread_rng, Rng};
+use rayon::prelude::*;
+use std::sync::Arc;
 // use crate::prelude::vector::{Vec3, LinAlgOp, LinAlgRandGen};
 // use crate::prelude::hittable_list::HittableList;
 // use crate::prelude::ray::Ray;
@@ -10,6 +10,29 @@ use crate::prelude::progress_bars::{ProgressBar, ParallelProgressIterator};
 // use crate::prelude::{Camera, Pixel, Scatter};
 // use crate::prelude::utils::progress_bars::ProgressBar;
 
+#[derive(Debug, Clone, Copy)]
+pub struct RenderConfig {
+    pub samples_per_pixel: usize,
+    pub max_depth: isize,
+}
+
+impl Default for RenderConfig {
+    fn default() -> Self {
+        Self {
+            samples_per_pixel: 100,
+            max_depth: 100,
+        }
+    }
+}
+
+impl RenderConfig {
+    pub fn new(samples_per_pixel: usize, max_depth: isize) -> Self {
+        Self {
+            samples_per_pixel,
+            max_depth,
+        }
+    }
+}
 
 pub fn interpolate_linear(start: Vec3, end: Vec3, time: f64) -> Vec3 {
     (1.0 - time) * start + time * end
@@ -74,8 +97,7 @@ pub fn par_process_pixels(
     image: Arc<Image>,
     camera: Arc<Camera>,
     world: Arc<HittableList>,
-    samples_per_pixel: usize,
-    max_depth: isize,
+    render_config: Arc<RenderConfig>,
     progress_bar: ProgressBar,
 ) -> Vec<Pixel> {
     let rows = 0..image.height;
@@ -107,9 +129,9 @@ pub fn par_process_pixels(
                 item.1,
                 camera.clone(),
                 world.clone(),
-                samples_per_pixel,
+                render_config.samples_per_pixel,
                 image.clone(),
-                max_depth,
+                render_config.max_depth,
             );
             (*item, value)
         })
