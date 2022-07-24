@@ -163,7 +163,7 @@ fn main() {
     );
 
     // Render.
-    let render_config = RenderConfig::new(500, 10);
+    let render_config = RenderConfig::new(32, 8);
 
     // Progress bar.
     // Draw every 1% to prevent frequent Rwlock-ing.
