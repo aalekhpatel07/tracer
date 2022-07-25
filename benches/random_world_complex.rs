@@ -1,11 +1,13 @@
-use rand::{thread_rng, Rng};
-use std::fs::File;
-use std::io::BufWriter;
-use std::sync::Arc;
-use tracer::prelude::*;
-use tracer::gen::*;
+#[macro_use]
+extern crate criterion;
 
-fn main() {
+use criterion::*;
+use tracer::gen::*;
+use tracer::prelude::*;
+use std::sync::Arc;
+
+
+pub fn process() {
     // Scene
     let world = create_random_world_complex();
 
@@ -41,7 +43,7 @@ fn main() {
     let pixel_pb = progress_bars::default(screen.width * screen.height);
     pixel_pb.set_draw_delta((screen.width as u64 * screen.height as u64) / 100);
 
-    let pixels = process_pixels(
+    process_pixels(
         Arc::new(screen.clone()),
         Arc::new(camera),
         Arc::new(world),
@@ -49,20 +51,15 @@ fn main() {
         pixel_pb,
     );
 
-    // Output
-    let out_file = File::create("./static/complex_scene.ppm").unwrap();
-    let mut writer = BufWriter::new(out_file);
-
-    let progress_bar =
-        progress_bars::file_writer(((screen.width as f64) * (screen.height as f64) * 11.) as usize);
-
-    let total_bytes_written = write_ppm(
-        &mut writer,
-        (screen.height, screen.width),
-        pixels.into_iter(),
-        progress_bar.clone(),
-    )
-    .unwrap();
-    progress_bar.set_position(total_bytes_written as u64);
-    progress_bar.finish();
 }
+
+
+fn criterion_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("process_pixels");
+    group.significance_level(0.1).sample_size(10);
+    group.bench_function("generate 1200x800px scene", |b| b.iter(|| process()));
+    group.finish();
+}
+
+criterion_group!(benches, criterion_benchmark);
+criterion_main!(benches);

@@ -10,10 +10,19 @@ rand = "0.8.4"
 indicatif = { version = "0.16.2", features = ["rayon"] }
 num_cpus = { version = "1.13.1", optional = true }
 rayon = { version = "1.5.1", optional = true }
+crossbeam-channel = { version = "0.5.6", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.3", features = ["html_reports"] }
 
 [features]
 default = ["parallel"]
-parallel = ["rayon", "num_cpus"]
+parallel = ["dep:rayon", "dep:num_cpus", "dep:crossbeam-channel"]
 
 [profile.release]
 lto = "fat"
+
+
+[[bench]]
+name = "random_world_complex"
+harness = false
